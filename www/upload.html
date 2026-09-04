@@ -416,17 +416,26 @@ async function handleFiles(files) {
       isVideo: f.type.startsWith('video/')
     });
 
-    // 渲染预览网格项
-    const item = document.createElement('div');
-    item.className = 'preview-item';
+    const domItem = document.createElement('div');
+    domItem.className = 'preview-item';
     if (f.type.startsWith('video/')) {
-      item.innerHTML = `<video src="${previewUrl}" muted></video><div class="size-tag">视频 ${formatSize(blob.size)}</div>`;
+      domItem.innerHTML = `<video src="${previewUrl}" muted></video><div class="size-tag">视频 ${formatSize(blob.size)}</div>`;
     } else {
       const saved = Math.round((1 - blob.size / f.size) * 100);
       const tagText = saved > 0 ? `省 ${saved}%` : formatSize(blob.size);
-      item.innerHTML = `<img src="${previewUrl}"><div class="size-tag">${tagText}</div>`;
+      domItem.innerHTML = `<img src="${previewUrl}"><div class="size-tag">${tagText}</div>`;
     }
-    previewGrid.appendChild(item);
+    previewGrid.appendChild(domItem);
+
+    processedFiles.push({
+      name: finalName,
+      blob,
+      originalSize: f.size,
+      compressedSize: blob.size,
+      previewUrl,
+      isVideo: f.type.startsWith('video/'),
+      domEl: domItem
+    });
   }
 
   const savedMb = ((totalOriginal - totalCompressed) / (1024 * 1024)).toFixed(1);
@@ -471,7 +480,7 @@ function uploadFileWithProgress(item, onProgress) {
   });
 }
 
-// 批量上传
+// 批量上传：每传完一个，立刻从待发区消除并实时显示
 btnUpload.onclick = async () => {
   if (!processedFiles.length) return;
 
@@ -480,41 +489,75 @@ btnUpload.onclick = async () => {
   progressWrap.style.display = 'flex';
 
   let successCount = 0;
-  const total = processedFiles.length;
+  const initialTotal = processedFiles.length;
 
-  for (let i = 0; i < total; i++) {
-    const item = processedFiles[i];
-    progressText.textContent = `准备传输 (${i + 1}/${total}): ${item.name}...`;
+  while (processedFiles.length > 0) {
+    const item = processedFiles[0];
+    const currentIndex = successCount + 1;
+    progressText.textContent = `准备传输 (${currentIndex}/${initialTotal}): ${item.name}...`;
 
     try {
       await uploadFileWithProgress(item, (loaded, fileTotal) => {
         const filePct = Math.round((loaded / fileTotal) * 100);
         const loadedMb = (loaded / (1024 * 1024)).toFixed(1);
         const totalMb = (fileTotal / (1024 * 1024)).toFixed(1);
-        const overallPct = Math.round(((i + (loaded / fileTotal)) / total) * 100);
+        const overallPct = Math.round(((successCount + (loaded / fileTotal)) / initialTotal) * 100);
         progressFill.style.width = overallPct + '%';
-        progressText.textContent = `正在传输 (${i + 1}/${total}): ${loadedMb}MB / ${totalMb}MB (${filePct}%)`;
+        progressText.textContent = `正在传输 (${currentIndex}/${initialTotal}): ${loadedMb}MB / ${totalMb}MB (${filePct}%)`;
       });
+
       successCount++;
+
+      // 核心体验提升：成功传完一张，立刻动画缩小消失并从队列中抹除！
+      if (item.domEl && item.domEl.parentNode) {
+        item.domEl.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        item.domEl.style.opacity = '0';
+        item.domEl.style.transform = 'scale(0.3)';
+        setTimeout(() => {
+          if (item.domEl && item.domEl.parentNode) {
+            item.domEl.parentNode.removeChild(item.domEl);
+          }
+        }, 300);
+      }
+      URL.revokeObjectURL(item.previewUrl);
+      processedFiles.shift(); // 从待发送列表中移除已完成的文件
+
+      queueTitle.textContent = `待发送 (${processedFiles.length} 项)`;
+      loadExistingMedia();
+      checkStatus();
+
     } catch (e) {
       console.error('上传失败', e);
-      showToast(`⚠️ 文件 ${item.name} 传输失败，请重试`);
+      showToast(`⚠️ 文件 ${item.name} 传输失败`);
+      if (item.domEl) {
+        item.domEl.style.border = '2px solid #ef4444';
+      }
+      // 遇到网络中断失败，保留剩余未传文件，退出循环允许用户重试
+      break;
     }
   }
 
   progressFill.style.width = '100%';
-  progressText.textContent = '全部发送完成！';
 
-  if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-  showToast(`🎉 成功同步 ${successCount} 个文件到相框！`);
+  if (processedFiles.length === 0) {
+    progressText.textContent = '全部发送完成！';
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    showToast(`🎉 成功同步 ${successCount} 个文件到相框！`);
 
-  setTimeout(() => {
-    btnCancel.click();
+    setTimeout(() => {
+      btnCancel.click();
+      btnCancel.disabled = false;
+      btnUpload.disabled = false;
+      progressWrap.style.display = 'none';
+      loadExistingMedia();
+    }, 1200);
+  } else {
+    // 存在未上传完的文件
     btnCancel.disabled = false;
     btnUpload.disabled = false;
-    progressWrap.style.display = 'none';
-    loadExistingMedia();
-  }, 1800);
+    btnUpload.textContent = `🔄 重新发送剩余 (${processedFiles.length} 项)`;
+    progressText.textContent = `已成功发送 ${successCount} 项，剩余 ${processedFiles.length} 项`;
+  }
 };
 
 function showToast(msg) {

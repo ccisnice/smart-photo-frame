@@ -186,7 +186,7 @@
   }
   .btn:active { background: rgba(255,255,255,0.25); transform: scale(0.96); }
   .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.15); margin: 0 2px; }
-  #interval { width: 76px; -webkit-appearance: none; appearance: none; text-align: center; }
+  #interval { width: 92px; -webkit-appearance: none; appearance: none; text-align: center; }
 
   /* 提示与状态 */
   #status {
@@ -304,12 +304,12 @@
   <div class="sep"></div>
   <button class="btn" id="shuffle">🔀 关</button>
   <div class="sep"></div>
-  <select class="btn" id="interval">
-    <option value="5">5秒</option>
-    <option value="8" selected>8秒</option>
-    <option value="12">12秒</option>
-    <option value="20">20秒</option>
-    <option value="30">30秒</option>
+  <select class="btn" id="interval" title="照片轮播间隔（视频将自动完整播放完毕）">
+    <option value="5">照片 5秒</option>
+    <option value="8" selected>照片 8秒</option>
+    <option value="12">照片 12秒</option>
+    <option value="20">照片 20秒</option>
+    <option value="30">照片 30秒</option>
   </select>
   <div class="sep"></div>
   <button class="btn" id="btn-sound" title="声音开关">🔇</button>
@@ -498,10 +498,20 @@ function buildItem(m) {
     el.setAttribute('webkit-playsinline', '');
     el.loop = false;
     el.preload = 'auto';
-    el.addEventListener('ended', () => { if (playing) next(); });
+    // 核心：视频播完触发 ended，自然平滑切换到下一张
+    el.addEventListener('ended', () => {
+      console.log('视频完整播放完毕，自动切下一张:', m.name);
+      if (playing) next();
+    });
+    // 动态获取真实时长，确保长视频绝不被提早打断
+    el.addEventListener('loadedmetadata', () => {
+      if (currentEl === div && playing) {
+        setVideoSafetyWatchdog(el);
+      }
+    });
     el.addEventListener('error', (err) => {
-      console.warn('视频播放异常，自动跳下一张', err);
-      if (playing) setTimeout(next, 3000);
+      console.warn('视频解码或播放异常，自动跳下一张', err);
+      if (playing) setTimeout(next, 2000);
     });
   } else {
     el = document.createElement('img');
@@ -526,6 +536,19 @@ function buildItem(m) {
   m.bgEl = bg;
 }
 
+function setVideoSafetyWatchdog(videoEl) {
+  clearTimeout(timer);
+  // 视频绝不仅播8秒！视频始终完整播放，直至自然结束。
+  // 兜底定时器仅用于防止个别视频解码挂死导致卡屏
+  const dur = (videoEl && videoEl.duration && !isNaN(videoEl.duration) && videoEl.duration > 0)
+    ? Math.ceil(videoEl.duration) + 3
+    : 300; // 未拿到时长前给足 5 分钟缓冲
+  timer = setTimeout(() => {
+    console.log('视频安全守护触发（防止卡死），自动循环下一张');
+    if (playing) next();
+  }, dur * 1000);
+}
+
 function show(i) {
   const next_item = media[i];
   if (!next_item) return;
@@ -546,16 +569,7 @@ function show(i) {
   counter.textContent = `${i + 1} / ${media.length}`;
 
   if (next_item.type === 'video') {
-    clearTimeout(timer);
-
-    // 核心安全守护：为视频增加智能时长兜底，绝不允许因视频末尾黑屏或事件丢失而卡死！
-    const safeTimeoutSeconds = (next_item.mediaEl.duration && !isNaN(next_item.mediaEl.duration) && next_item.mediaEl.duration > 0)
-      ? Math.ceil(next_item.mediaEl.duration) + 1
-      : 30;
-    timer = setTimeout(() => {
-      console.log('视频守护计时器触发，自动无缝循环下一张');
-      if (playing) next();
-    }, safeTimeoutSeconds * 1000);
+    setVideoSafetyWatchdog(next_item.mediaEl);
 
     try {
       next_item.mediaEl.muted = isMuted;
@@ -683,9 +697,69 @@ document.getElementById('btn-delete').onclick = async (e) => {
   }
   pokeUI();
 };
-// 点击屏幕暂停/播放并唤出控制条
-stage.addEventListener('click', () => { togglePlay(); pokeUI(); });
+// 交互改造：
+// 1. 点击屏幕：仅唤出底部控制栏 3 秒，绝不打断播放！
+stage.addEventListener('click', () => { pokeUI(); });
 document.body.addEventListener('mousemove', pokeUI);
+
+// 2. 屏幕左右滑动手势切照片（横滑切换，符合相册直觉）
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isSwiping = false;
+
+stage.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchEndX = touchStartX;
+    touchEndY = touchStartY;
+    isSwiping = true;
+  }
+}, { passive: true });
+
+stage.addEventListener('touchmove', (e) => {
+  if (isSwiping && e.touches.length === 1) {
+    touchEndX = e.touches[0].clientX;
+    touchEndY = e.touches[0].clientY;
+  }
+}, { passive: true });
+
+stage.addEventListener('touchend', () => {
+  if (!isSwiping) return;
+  isSwiping = false;
+  const deltaX = touchEndX - touchStartX;
+  const deltaY = touchEndY - touchStartY;
+
+  // 滑动判定：水平滑动距离 > 40px，且水平位移明显大于垂直位移 (1.2倍)
+  if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+    if (deltaX < 0) {
+      // 👈 向左滑动：下一张
+      console.log('手势向左滑：下一张');
+      next();
+    } else {
+      // 👉 向右滑动：上一张
+      console.log('手势向右滑：上一张');
+      prev();
+    }
+  }
+  pokeUI();
+});
+
+// 3. 键盘左右方向键与空格快捷键（兼容外接键盘）
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    next();
+    pokeUI();
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    prev();
+    pokeUI();
+  } else if (e.key === ' ') {
+    togglePlay();
+    pokeUI();
+  }
+});
 
 // 实时自动轮询检测手机上传的新照片（每 5 秒一次）
 setInterval(async () => {
