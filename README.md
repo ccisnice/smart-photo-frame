@@ -88,10 +88,11 @@ docker run -d \
 
 如果你喜欢这个开源小工具，它帮你的闲置平板焕发了新生，欢迎请作者喝杯咖啡鼓励持续维护与更新！
 
-| 爱发电 (微信 / 支付宝) | 微信个人赞赏码 | Buy Me a Coffee (USD) |
-| :---: | :---: | :---: |
-| [👉 点击前往爱发电赞助](https://afdian.com) | *(扫描下方微信赞赏码)* | [👉 Buy Me a Coffee](https://www.buymeacoffee.com) |
-| 适合国内用户快速赞助 | 零手续费直接打赏 | 适合海外用户 |
+<div align="center">
+  <img src="./assets/sponsor.png" width="280" alt="微信赞赏码" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+  <br/>
+  <p><strong>微信扫一扫上方赞赏码，请野生独立开发者喝杯咖啡 ☕️</strong></p>
+</div>
 
 > 欢迎在打赏时备注你的 GitHub ID，我会将你列入项目的 **Sponsors（致谢赞助名单）**！❤️
 
