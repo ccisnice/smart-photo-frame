@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能相框 - 隐私政策与用户协议</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    line-height: 1.7;
+    color: #27272a;
+    background: #fafafa;
+    padding: 24px 16px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .container {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #09090b; }
+  .update-time { font-size: 13px; color: #71717a; margin-bottom: 24px; border-bottom: 1px solid #e4e4e7; padding-bottom: 12px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 20px 0 8px; color: #18181b; }
+  p, li { font-size: 14px; color: #3f3f46; margin-bottom: 8px; }
+  ul { padding-left: 20px; }
+  .highlight-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 16px 0;
+  }
+  .highlight-box p { color: #166534; font-weight: 500; margin: 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>智能相框 · 隐私政策</h1>
+  <div class="update-time">更新日期与生效日期：2026年9月4日</div>
+
+  <div class="highlight-box">
+    <p>🛡️ 核心隐私承诺：智能相框是一款 100% 局域网离线运行的纯净工具应用。我们不设立远程云端服务器、不收集任何用户个人身份信息、不包含任何第三方广告或数据跟踪 SDK。您的所有照片、视频均仅保存在您自己的平板或本地设备中！</p>
+  </div>
+
+  <h2>1. 我们收集的信息与使用场景</h2>
+  <p>本应用在运行期间仅在用户授权的本地范围内使用以下必要系统能力：</p>
+  <ul>
+    <li><strong>本地局域网与Wi-Fi状态（ACCESS_WIFI_STATE / ACCESS_NETWORK_STATE）</strong>：用于识别平板在当前家庭Wi-Fi中的内网IP地址，以便生成局域网扫码二维码，供同一Wi-Fi下的手机扫码投送相片。我们绝不会上传您的网络环境信息或路由器信息。</li>
+    <li><strong>本地应用私有存储空间</strong>：手机通过扫码上传的照片与视频，直接以点对点方式写入平板的本地沙盒私有存储目录中，仅供本相框程序轮播播放，绝不会同步至任何远程云端。</li>
+    <li><strong>屏幕常亮能力（WAKE_LOCK / Screen Wake Lock）</strong>：用于相框持续通电展示时防止平板黑屏休眠。</li>
+  </ul>
+
+  <h2>2. 权限使用说明</h2>
+  <ul>
+    <li><strong>INTERNET</strong>：仅用于平板内部前端与内嵌微服务（127.0.0.1:8000）通信以及局域网手机上传接收，不向外网发送任何数据。</li>
+    <li><strong>ACCESS_NETWORK_STATE / ACCESS_WIFI_STATE</strong>：读取本地网络连接状态以确保局域网投送通道可用。</li>
+    <li><strong>WAKE_LOCK</strong>：保持相框处于屏幕常亮展示状态。</li>
+  </ul>
+
+  <h2>3. 数据安全与第三方共享</h2>
+  <p>我们严格遵守相关法律法规及应用市场合规准则：</p>
+  <ul>
+    <li>本应用无任何第三方数据统计、广告推送、用户行为追踪等 SDK。</li>
+    <li>本应用不与任何第三方商业机构或个人共享您的媒体文件或设备信息。</li>
+    <li>用户可随时通过相框界面或手机管理端点击“删除”按钮，彻底物理抹除保存在本地的照片与视频。</li>
+  </ul>
+
+  <h2>4. 开发者与联系方式</h2>
+  <p>若您对本隐私政策有任何疑问、意见或反馈，可通过应用支持渠道联系开发者团队。</p>
+</div>
+</body>
+</html>

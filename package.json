@@ -1,0 +1,23 @@
+{
+  "name": "photo-frame",
+  "version": "1.0.0",
+  "description": "把手机里的照片、视频在旧平板上自动循环播放，**纯软件即可实现，不需要额外硬件**。",
+  "main": "qrcode.min.js",
+  "scripts": {
+    "build": "mkdir -p www/media && cp index.html upload.html privacy.html icon.png icon-192.png qrcode.min.js manifest.json www/ && cp media/海边温馨小屋.jpg media/雪山夕阳倒影.jpg www/media/ 2>/dev/null || true",
+    "sync": "npm run build && npx cap sync",
+    "build:apk": "npm run sync && export JAVA_HOME=/opt/homebrew/opt/openjdk@21 && export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools && cd android && ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../智能相框.apk",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1"
+  }
+}

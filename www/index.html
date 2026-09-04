@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>智能相框</title>
+
+<!-- PWA 独立桌面 App 规范标签 -->
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="智能相框">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+
+<style>
+  :root {
+    --bar-h: 60px;
+    --primary: #6366f1;
+    --accent: #10b981;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* 舞台轮播区域 */
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+  }
+  .item {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity;
+    overflow: hidden;
+  }
+  .item.active { opacity: 1; z-index: 2; }
+
+  /* 动态高斯模糊流光氛围背景（硬件 GPU 加速，丝滑无卡顿，彻底告别黑边） */
+  .item .ambient-bg {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(35px) brightness(0.4) saturate(1.2);
+    transform: scale(1.1) translateZ(0);
+    will-change: opacity;
+    opacity: 0.9;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* 前台高清主体内容：100% 保真不裁切，绝不切头切人像 */
+  .item img.media-el, .item video.media-el {
+    position: relative;
+    z-index: 2;
+    max-width: 100vw;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.85);
+    border-radius: 6px;
+    transform: translateZ(0);
+  }
+
+  .item .meta {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 36px 24px 24px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .item.active .meta { opacity: 1; }
+
+  /* 计数器与网络指示 */
+  #counter {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top));
+    right: max(20px, env(safe-area-inset-right));
+    color: rgba(255,255,255,0.65);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.4s;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(8px);
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* 悬浮扫码投送入口 (常态半透明微隐，触摸屏幕时亮起) */
+  #btn-qr-float {
+    position: fixed;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    background: rgba(24, 24, 27, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    cursor: pointer;
+    z-index: 6;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0.25;
+  }
+  #btn-qr-float:hover, body.showui #btn-qr-float { opacity: 1; }
+  #btn-qr-float:active { transform: scale(0.95); }
+
+  /* 底部控制栏：无人触碰时自动沉浸隐藏，触摸屏幕即时浮现 */
+  #bar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%) translateY(140%);
+    opacity: 0;
+    pointer-events: none;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    height: var(--bar-h);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(24, 24, 27, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 30px;
+    padding: 0 16px;
+    z-index: 8;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s;
+  }
+  body.showui #bar { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+  body.showui #counter { opacity: 1; }
+
+  .btn {
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: #fff;
+    min-width: 42px;
+    height: 38px;
+    border-radius: 19px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    line-height: 1;
+    transition: all 0.2s;
+  }
+  .btn:active { background: rgba(255,255,255,0.25); transform: scale(0.96); }
+  .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.15); margin: 0 2px; }
+  #interval { width: 76px; -webkit-appearance: none; appearance: none; text-align: center; }
+
+  /* 提示与状态 */
+  #status {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    color: #a1a1aa;
+    font-size: 16px;
+    z-index: 4;
+    text-align: center;
+    max-width: 80%;
+  }
+  #hint {
+    position: fixed;
+    left: 50%;
+    top: 24px;
+    transform: translateX(-50%);
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    backdrop-filter: blur(12px);
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 12;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+
+  /* 二维码弹窗遮罩层 */
+  #qr-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  #qr-modal.show { opacity: 1; pointer-events: auto; }
+  .qr-card {
+    background: #18181b;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 28px;
+    padding: 32px 28px 24px;
+    text-align: center;
+    max-width: 360px;
+    width: 90%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .qr-card h3 { font-size: 19px; color: #fff; font-weight: 600; }
+  .qr-card p { font-size: 13px; color: #a1a1aa; line-height: 1.5; }
+  .qr-box {
+    background: #fff;
+    padding: 14px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .qr-url {
+    font-family: monospace;
+    font-size: 12px;
+    color: #818cf8;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+    word-break: break-all;
+  }
+  .btn-close-qr {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 4px;
+    width: 100%;
+  }
+</style>
+<script src="/qrcode.min.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="counter"></div>
+<div id="status">正在加载相框…</div>
+<div id="hint">✨ 收到新照片，正在载入播放</div>
+
+<!-- 浮动扫码入口 -->
+<div id="btn-qr-float">
+  <span>📱</span>
+  <span>手机扫码投照片</span>
+</div>
+
+<!-- 底部控制条 -->
+<div id="bar">
+  <button class="btn" id="prev">‹</button>
+  <button class="btn" id="play">⏸</button>
+  <button class="btn" id="next">›</button>
+  <div class="sep"></div>
+  <button class="btn" id="shuffle">🔀 关</button>
+  <div class="sep"></div>
+  <select class="btn" id="interval">
+    <option value="5">5秒</option>
+    <option value="8" selected>8秒</option>
+    <option value="12">12秒</option>
+    <option value="20">20秒</option>
+    <option value="30">30秒</option>
+  </select>
+  <div class="sep"></div>
+  <button class="btn" id="btn-sound" title="声音开关">🔇</button>
+  <div class="sep"></div>
+  <button class="btn" id="btn-delete" title="删除当前照片" style="color:#f87171;">🗑️</button>
+</div>
+
+<!-- 扫码弹窗 -->
+<div id="qr-modal">
+  <div class="qr-card">
+    <h3>📱 手机扫码投送相片</h3>
+    <p>手机连上同一个家庭 Wi-Fi 后，用微信或自带相机扫码，即可挑选照片直接发到此相框：</p>
+    <div class="qr-box" id="qrcode-container"></div>
+    <div class="qr-url" id="qr-url-text">http://...</div>
+    <div id="qr-net-status" style="margin-top:10px;font-size:13px;font-weight:500;"></div>
+    <div id="qr-net-warning" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:12px;color:#fca5a5;line-height:1.4;"></div>
+    <div id="apk-dl-box" style="margin-top:12px;font-size:12px;color:#94a3b8;">
+      🤖 安卓平板或手机安装：<a href="/app.apk" download="智能相框.apk" style="color:#818cf8;font-weight:600;text-decoration:underline;">下载 智能相框.apk</a>
+    </div>
+    <button class="btn-close-qr" id="btn-close-qr">关闭</button>
+  </div>
+</div>
+
+<script>
+const stage = document.getElementById('stage');
+const counter = document.getElementById('counter');
+const status = document.getElementById('status');
+const hint = document.getElementById('hint');
+const qrModal = document.getElementById('qr-modal');
+const btnQrFloat = document.getElementById('btn-qr-float');
+const btnCloseQr = document.getElementById('btn-close-qr');
+const qrContainer = document.getElementById('qrcode-container');
+const qrUrlText = document.getElementById('qr-url-text');
+
+let media = [];
+let idx = 0;
+let playing = true;
+let timer = null;
+let shuffle = false;
+let interval = 8;
+let currentEl = null;
+let uploadUrl = '';
+let isMuted = true;
+
+// 自动嗅探运行环境：
+// 1. 如果在安卓/iOS App 容器中运行 (window.Capacitor)，连接本地内嵌微服务 (http://127.0.0.1:8000)
+// 2. 如果在普通网页浏览器访问，使用相对路径
+const isApp = !!(window.Capacitor || location.protocol === 'capacitor:' || (location.hostname === 'localhost' && location.port !== '8000'));
+const API_BASE = isApp ? 'http://127.0.0.1:8000' : '';
+
+// 加载局域网服务信息与二维码
+async function initServerInfo() {
+  try {
+    const res = await fetch(API_BASE + '/api/info');
+    if (res.ok) {
+      const data = await res.json();
+      uploadUrl = data.upload_url;
+      qrUrlText.textContent = uploadUrl;
+
+      const statusEl = document.getElementById('qr-net-status');
+      const warnEl = document.getElementById('qr-net-warning');
+      const dlBox = document.getElementById('apk-dl-box');
+
+      if (isApp) {
+        // 在 App 内部绝对不显示“下载 APK”按钮，避免误导
+        if (dlBox) dlBox.style.display = 'none';
+
+        if (data.is_wifi) {
+          statusEl.innerHTML = `<span style="color:#10b981;">🟢 本机就绪 · 照片直传此平板</span><br><span style="color:#94a3b8;font-size:12px;">请确保手机连入同一个家庭 Wi-Fi</span>`;
+          warnEl.style.display = 'none';
+        } else {
+          statusEl.innerHTML = `<span style="color:#ef4444;">🔴 未连接家庭 Wi-Fi</span>`;
+          warnEl.textContent = data.warning || '请将此平板连接至家庭 Wi-Fi，手机才能局域网投送！';
+          warnEl.style.display = 'block';
+        }
+      } else {
+        if (dlBox) dlBox.style.display = 'block';
+      }
+
+      // 生成离线二维码
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: uploadUrl,
+        width: 180,
+        height: 180,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+  } catch (e) {
+    console.error('获取服务信息失败', e);
+  }
+}
+
+// 二维码弹窗事件
+btnQrFloat.onclick = (e) => {
+  e.stopPropagation();
+  qrModal.classList.add('show');
+};
+btnCloseQr.onclick = () => qrModal.classList.remove('show');
+qrModal.onclick = (e) => {
+  if (e.target === qrModal) qrModal.classList.remove('show');
+};
+
+// 轮播核心逻辑
+async function load() {
+  try {
+    const res = await fetch(API_BASE + '/api/media');
+    const data = await res.json();
+    updateMediaList(data, true);
+  } catch(e) {
+    status.textContent = isApp ? '正在启动本地相框服务，请稍候...' : '无法连接相框服务，请确认局域网服务已启动';
+    setTimeout(load, 2000);
+    return;
+  }
+}
+
+function updateMediaList(newList, isInitial = false) {
+  // 补全媒体资源的完整路径
+  newList.forEach(m => {
+    if (!m.url.startsWith('http')) {
+      m.url = API_BASE + m.url;
+    }
+  });
+
+  if (!newList.length) {
+    status.style.display = 'block';
+    status.innerHTML = '相框是空的<br><br><span style="font-size:14px;color:#818cf8;cursor:pointer" onclick="qrModal.classList.add(\'show\')">点我打开手机扫码投送二维码</span>';
+    return;
+  }
+  status.style.display = 'none';
+
+  // 如果列表没有实质变化，直接退出，避免破坏正在下载的图片流
+  if (!isInitial && newList.length === media.length && newList.every((m, i) => m.name === media[i].name && m.mtime === media[i].mtime)) {
+    return;
+  }
+
+  // 检查是否有新增照片
+  const oldUrls = new Set(media.map(m => m.url));
+  const newItems = newList.filter(m => !oldUrls.has(m.url));
+
+  if (!isInitial && newItems.length > 0) {
+    showToast(`✨ 收到 ${newItems.length} 张新照片，正在载入播放`);
+  }
+
+  // 如果当前正有一段视频在播放，不要强行打断清屏，等视频播完下一轮再更新
+  const isVideoPlaying = currentEl && media[idx] && media[idx].type === 'video' && media[idx].mediaEl && !media[idx].mediaEl.paused;
+  if (isVideoPlaying && !isInitial) {
+    return;
+  }
+
+  media = newList;
+  stage.innerHTML = '';
+  media.forEach(buildItem);
+
+  if (isInitial || newItems.length > 0) {
+    show(0);
+  } else if (currentEl) {
+    show(idx % media.length);
+  }
+}
+
+function buildItem(m) {
+  const div = document.createElement('div');
+  div.className = 'item';
+
+  // 1. 动态高斯模糊流光背景（解决竖屏照片和视频两侧黑边，营造艺术氛围感）
+  const bg = document.createElement('div');
+  bg.className = 'ambient-bg';
+  if (m.type === 'image') {
+    bg.style.backgroundImage = `url("${m.url}?t=${m.mtime || Date.now()}")`;
+  } else {
+    bg.style.background = 'radial-gradient(circle, rgba(60,60,80,0.85) 0%, rgba(10,10,16,1) 100%)';
+  }
+  div.appendChild(bg);
+
+  // 2. 前台媒体主体
+  let el;
+  if (m.type === 'video') {
+    el = document.createElement('video');
+    el.src = m.url;
+    el.muted = isMuted;
+    el.playsInline = true;
+    el.setAttribute('playsinline', '');
+    el.setAttribute('webkit-playsinline', '');
+    el.loop = false;
+    el.preload = 'auto';
+    el.addEventListener('ended', () => { if (playing) next(); });
+    el.addEventListener('error', (err) => {
+      console.warn('视频播放异常，自动跳下一张', err);
+      if (playing) setTimeout(next, 3000);
+    });
+  } else {
+    el = document.createElement('img');
+    el.src = m.url + '?t=' + (m.mtime || Date.now());
+    el.onerror = () => {
+      console.warn('图片解码或传输中断，正在重新获取完整图像:', m.name);
+      setTimeout(() => {
+        el.src = m.url + '?retry=' + Date.now();
+      }, 1500);
+    };
+  }
+  el.className = 'media-el';
+  div.appendChild(el);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = m.name;
+  div.appendChild(meta);
+  stage.appendChild(div);
+  m.el = div;
+  m.mediaEl = el;
+  m.bgEl = bg;
+}
+
+function show(i) {
+  const next_item = media[i];
+  if (!next_item) return;
+  clearTimeout(timer);
+
+  // 关键修复：切换前强行暂停所有视频并重置时间，防止切走后背景音继续播放
+  media.forEach(m => {
+    if (m.type === 'video' && m.mediaEl) {
+      m.mediaEl.pause();
+      m.mediaEl.currentTime = 0;
+    }
+  });
+
+  if (currentEl) currentEl.classList.remove('active');
+  next_item.el.classList.add('active');
+  currentEl = next_item.el;
+  idx = i;
+  counter.textContent = `${i + 1} / ${media.length}`;
+
+  if (next_item.type === 'video') {
+    clearTimeout(timer);
+
+    // 核心安全守护：为视频增加智能时长兜底，绝不允许因视频末尾黑屏或事件丢失而卡死！
+    const safeTimeoutSeconds = (next_item.mediaEl.duration && !isNaN(next_item.mediaEl.duration) && next_item.mediaEl.duration > 0)
+      ? Math.ceil(next_item.mediaEl.duration) + 1
+      : 30;
+    timer = setTimeout(() => {
+      console.log('视频守护计时器触发，自动无缝循环下一张');
+      if (playing) next();
+    }, safeTimeoutSeconds * 1000);
+
+    try {
+      next_item.mediaEl.muted = isMuted;
+      next_item.mediaEl.currentTime = 0;
+      const playPromise = next_item.mediaEl.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((e) => {
+          console.warn('视频播放被系统拦截，3秒后自动切下一张', e);
+          clearTimeout(timer);
+          timer = setTimeout(() => { if (playing) next(); }, 2500);
+        });
+      }
+    } catch(e){
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (playing) next(); }, 2500);
+    }
+  } else {
+    schedule();
+  }
+}
+
+function schedule() {
+  clearTimeout(timer);
+  if (!playing) return;
+  timer = setTimeout(() => next(), interval * 1000);
+}
+
+function next() {
+  if (!media.length) return;
+  let i;
+  if (shuffle) {
+    do { i = Math.floor(Math.random() * media.length); } while (media.length > 1 && i === idx);
+  } else {
+    i = (idx + 1) % media.length;
+  }
+  show(i);
+}
+
+function prev() {
+  if (!media.length) return;
+  idx = (idx - 1 + media.length) % media.length;
+  show(idx);
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('play').textContent = playing ? '⏸' : '▶';
+  if (playing) {
+    if (currentEl && media[idx].type === 'video') media[idx].mediaEl.play().catch(()=>{});
+    schedule();
+  } else {
+    clearTimeout(timer);
+    if (currentEl && media[idx].type === 'video') media[idx].mediaEl.pause();
+  }
+}
+
+// 控制栏自动隐藏交互
+let uiTimer;
+function pokeUI() {
+  document.body.classList.add('showui');
+  clearTimeout(uiTimer);
+  uiTimer = setTimeout(() => document.body.classList.remove('showui'), 3000);
+}
+
+function showToast(msg) {
+  hint.textContent = msg;
+  hint.style.opacity = '1';
+  setTimeout(() => { hint.style.opacity = '0'; }, 3500);
+}
+
+document.getElementById('prev').onclick = (e) => { e.stopPropagation(); prev(); pokeUI(); };
+document.getElementById('next').onclick = (e) => { e.stopPropagation(); next(); pokeUI(); };
+document.getElementById('play').onclick = (e) => { e.stopPropagation(); togglePlay(); pokeUI(); };
+document.getElementById('shuffle').onclick = (e) => {
+  e.stopPropagation();
+  shuffle = !shuffle;
+  document.getElementById('shuffle').textContent = shuffle ? '🔀 开' : '🔀 关';
+  pokeUI();
+};
+document.getElementById('interval').onchange = (e) => {
+  interval = +e.target.value;
+  pokeUI();
+  schedule();
+};
+document.getElementById('btn-sound').onclick = (e) => {
+  e.stopPropagation();
+  isMuted = !isMuted;
+  document.getElementById('btn-sound').textContent = isMuted ? '🔇' : '🔊';
+  showToast(isMuted ? '🔇 视频已静音' : '🔊 视频已开启声音');
+  media.forEach(m => {
+    if (m.type === 'video' && m.mediaEl) {
+      m.mediaEl.muted = isMuted;
+    }
+  });
+  if (currentEl && media[idx] && media[idx].type === 'video' && media[idx].mediaEl) {
+    media[idx].mediaEl.muted = isMuted;
+  }
+  pokeUI();
+};
+document.getElementById('btn-delete').onclick = async (e) => {
+  e.stopPropagation();
+  if (!media.length || !media[idx]) return;
+  const current = media[idx];
+  if (confirm(`确定要从相框中删除这张照片「${current.name}」吗？`)) {
+    try {
+      const res = await fetch(`${API_BASE}/api/delete?name=${encodeURIComponent(current.name)}`, { method: 'POST' });
+      if (res.ok) {
+        showToast(`🗑️ 已成功删除照片`);
+        media.splice(idx, 1);
+        if (current.el && current.el.parentNode) {
+          current.el.parentNode.removeChild(current.el);
+        }
+        if (media.length > 0) {
+          show(idx % media.length);
+        } else {
+          status.style.display = 'block';
+          status.innerHTML = '相框是空的<br><br><span style="font-size:14px;color:#818cf8;cursor:pointer" onclick="qrModal.classList.add(\'show\')">点我打开手机扫码投送二维码</span>';
+        }
+      } else {
+        alert('删除失败，请稍后重试');
+      }
+    } catch(err) {
+      alert('网络异常，删除失败');
+    }
+  }
+  pokeUI();
+};
+// 点击屏幕暂停/播放并唤出控制条
+stage.addEventListener('click', () => { togglePlay(); pokeUI(); });
+document.body.addEventListener('mousemove', pokeUI);
+
+// 实时自动轮询检测手机上传的新照片（每 5 秒一次）
+setInterval(async () => {
+  try {
+    const res = await fetch(API_BASE + '/api/media');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.length !== media.length || (data.length > 0 && data[0].mtime !== (media[0] && media[0].mtime))) {
+        updateMediaList(data, false);
+      }
+    }
+  } catch (e) {}
+}, 5000);
+
+// 核心防息屏：调用系统级屏幕常亮锁 (Screen Wake Lock API)
+let wakeLock = null;
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('💡 屏幕常亮锁激活成功：平板将保持常亮');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (e) {
+      console.warn('请求常亮锁被跳过或不受支持:', e);
+    }
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+window.addEventListener('focus', requestWakeLock);
+document.addEventListener('click', requestWakeLock);
+requestWakeLock();
+
+pokeUI();
+initServerInfo();
+load();
+</script>
+</body>
+</html>

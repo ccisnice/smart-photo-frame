@@ -1,0 +1,11 @@
+services:
+  photo-frame:
+    build: .
+    image: photo-frame:latest
+    container_name: photo-frame
+    ports:
+      - "8000:8000"
+    volumes:
+      # 照片/视频放宿主机的 media 文件夹，实时映射进容器
+      - ./media:/app/media
+    restart: unless-stopped
