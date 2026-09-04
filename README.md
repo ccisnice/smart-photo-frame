@@ -9,6 +9,12 @@
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web%20%7C%20Docker-orange?style=flat-square)](#)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/ccisnice/smart-photo-frame/pulls)
 
+<br/>
+
+<img src="./assets/promo_cover.jpg" width="600" alt="智能相框 实拍效果" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);" />
+
+<br/><br/>
+
 [📥 下载最新安卓 APK 安装包](https://github.com/ccisnice/smart-photo-frame/releases/latest) • [✨ 核心亮点](#-核心亮点) • [📱 快速安装](#-快速开始与安装) • [☕️ 请作者喝杯咖啡](#️-请作者喝杯咖啡)
 
 </div>
