@@ -4,6 +4,8 @@
 
 **把吃灰的闲置平板、旧手机，秒变客厅艺术数码相框**
 
+🌐 **[English](README_EN.md)** • **[简体中文](README.md)**
+
 [![GitHub release](https://img.shields.io/github/v/release/ccisnice/smart-photo-frame?style=flat-square&color=blue)](https://github.com/ccisnice/smart-photo-frame/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web%20%7C%20Docker-orange?style=flat-square)](#)
