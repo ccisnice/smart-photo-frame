@@ -1,6 +1,6 @@
 {
   "name": "photo-frame",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "把手机里的照片、视频在旧平板上自动循环播放，**纯软件即可实现，不需要额外硬件**。",
   "main": "qrcode.min.js",
   "scripts": {

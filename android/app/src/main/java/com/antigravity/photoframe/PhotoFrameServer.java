@@ -218,7 +218,7 @@ public class PhotoFrameServer extends NanoHTTPD {
         List<Map<String, Object>> list = new ArrayList<>();
         if (files != null) {
             for (File f : files) {
-                if (f.isFile() && !f.getName().startsWith(".")) {
+                if (f.isFile() && !f.getName().startsWith(".") && !f.getName().endsWith(".part") && !f.getName().endsWith(".tmp")) {
                     String name = f.getName().toLowerCase();
                     boolean isVideo = name.endsWith(".mp4") || name.endsWith(".mov") || name.endsWith(".webm") || name.endsWith(".m4v");
                     boolean isImg = name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif");
@@ -273,6 +273,7 @@ public class PhotoFrameServer extends NanoHTTPD {
     }
 
     private Response handleRawBinaryUpload(IHTTPSession session) {
+        File tempPartFile = null;
         try {
             String filename = null;
             List<String> fnList = session.getParameters().get("filename");
@@ -298,6 +299,9 @@ public class PhotoFrameServer extends NanoHTTPD {
                 target = new File(mediaDir, filename);
             }
 
+            // 关键修复：使用点号开头的隐藏 .part 临时文件接收，防止相框轮播在视频尚未传输完时抢先播放导致半截中断
+            tempPartFile = new File(mediaDir, "." + filename + ".part");
+
             String lenStr = session.getHeaders().get("content-length");
             long contentLength = 0;
             if (lenStr != null) {
@@ -305,7 +309,7 @@ public class PhotoFrameServer extends NanoHTTPD {
             }
 
             InputStream is = session.getInputStream();
-            try (FileOutputStream fos = new FileOutputStream(target)) {
+            try (FileOutputStream fos = new FileOutputStream(tempPartFile)) {
                 byte[] buf = new byte[64 * 1024];
                 long bytesReadTotal = 0;
                 while (bytesReadTotal < contentLength) {
@@ -318,7 +322,13 @@ public class PhotoFrameServer extends NanoHTTPD {
                 fos.flush();
             }
 
-            Log.i(TAG, "成功接收手机上传二进制流文件: " + filename + " (大小: " + target.length() + " 字节)");
+            // 只有当 100% 字节完全接收并刷盘后，才原子重命名为正式目标文件
+            if (!tempPartFile.renameTo(target)) {
+                copyFile(tempPartFile, target);
+                tempPartFile.delete();
+            }
+
+            Log.i(TAG, "成功接收手机上传二进制流完整文件: " + filename + " (大小: " + target.length() + " 字节)");
 
             String json = "{\"ok\":true,\"success\":true,\"name\":\"" + escapeJson(filename) + "\"}";
             Response resp = newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", json);
@@ -326,6 +336,9 @@ public class PhotoFrameServer extends NanoHTTPD {
             return resp;
         } catch (Exception e) {
             Log.e(TAG, "处理二进制流上传异常", e);
+            if (tempPartFile != null && tempPartFile.exists()) {
+                tempPartFile.delete();
+            }
             Response resp = newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "application/json; charset=utf-8", "{\"ok\":false,\"error\":\"" + escapeJson(e.getMessage()) + "\"}");
             addCorsHeaders(resp);
             return resp;

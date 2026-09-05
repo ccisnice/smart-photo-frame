@@ -256,17 +256,25 @@ class FrameHandler(SimpleHTTPRequestHandler):
                 if content_len <= 0:
                     return self.send_json({"error": "上传内容为空"}, status=400)
 
-                # 读取二进制流并写入文件
+                # 读取二进制流写入隐藏 .part 临时文件，100% 传输完毕后原子重命名，防止相框轮播抢播未传完的残片
                 os.makedirs(MEDIA_DIR, exist_ok=True)
-                with open(target_path, "wb") as f:
-                    remaining = content_len
-                    chunk_size = 64 * 1024
-                    while remaining > 0:
-                        read_bytes = self.rfile.read(min(remaining, chunk_size))
-                        if not read_bytes:
-                            break
-                        f.write(read_bytes)
-                        remaining -= len(read_bytes)
+                temp_path = os.path.join(MEDIA_DIR, f".{filename}.part")
+                try:
+                    with open(temp_path, "wb") as f:
+                        remaining = content_len
+                        chunk_size = 64 * 1024
+                        while remaining > 0:
+                            read_bytes = self.rfile.read(min(remaining, chunk_size))
+                            if not read_bytes:
+                                break
+                            f.write(read_bytes)
+                            remaining -= len(read_bytes)
+
+                    os.replace(temp_path, target_path)
+                except Exception as write_err:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    raise write_err
 
                 print(f"[+] 成功接收新照片/视频: {filename} ({content_len / 1024:.1f} KB)")
                 return self.send_json({

@@ -46,15 +46,20 @@ cd android
 ./gradlew assembleRelease bundleRelease
 cd "$PROJECT_ROOT"
 
+VERSION=$(node -p "require('./package.json').version")
+echo "📌 当前版本号: v$VERSION"
+
 UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
 ALIGNED_APK="android/app/build/outputs/apk/release/app-release-aligned.apk"
-SIGNED_APK="$PROJECT_ROOT/智能相框-市场正式签名版.apk"
+SIGNED_APK="$PROJECT_ROOT/智能相框-v${VERSION}-正式签名版.apk"
 AAB_SRC="android/app/build/outputs/bundle/release/app-release.aab"
-AAB_DEST="$PROJECT_ROOT/智能相框-GooglePlay专版.aab"
+AAB_DEST="$PROJECT_ROOT/智能相框-v${VERSION}-GooglePlay专版.aab"
+DEBUG_APK_SRC="android/app/build/outputs/apk/debug/app-debug.apk"
+DEBUG_APK_DEST="$PROJECT_ROOT/智能相框-v${VERSION}-测试体验版.apk"
 
 # 4. 对齐并签名 APK
 echo "✍️ 正在进行 4字节对齐与 V2/V3 签名..."
-rm -f "$ALIGNED_APK" "$SIGNED_APK"
+rm -f "$ALIGNED_APK" "$SIGNED_APK" "$DEBUG_APK_DEST"
 "$BUILD_TOOLS/zipalign" -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK" >/dev/null
 
 "$BUILD_TOOLS/apksigner" sign \
@@ -69,16 +74,28 @@ rm -f "$ALIGNED_APK" "$SIGNED_APK"
 echo "🔍 验证签名合规性..."
 "$BUILD_TOOLS/apksigner" verify --verbose "$SIGNED_APK"
 
-# 6. 复制 AAB
+# 6. 复制 AAB 与测试版
 cp "$AAB_SRC" "$AAB_DEST"
+if [ -f "$DEBUG_APK_SRC" ]; then
+    cp "$DEBUG_APK_SRC" "$DEBUG_APK_DEST"
+fi
+
+# 7. 同时输出兼容的英文标准发行名 (GitHub 国际规范)
+cp "$SIGNED_APK" "$PROJECT_ROOT/SmartPhotoFrame-v${VERSION}-release.apk"
+if [ -f "$DEBUG_APK_DEST" ]; then
+    cp "$DEBUG_APK_DEST" "$PROJECT_ROOT/SmartPhotoFrame-v${VERSION}-debug.apk"
+fi
+cp "$AAB_DEST" "$PROJECT_ROOT/SmartPhotoFrame-v${VERSION}.aab"
 
 echo ""
 echo "=================================================="
-echo "🎉 打包完成！已生成应用市场标准交付文件："
+echo "🎉 打包完成！版本号: v$VERSION"
 echo "1. 国内各大安卓市场 APK (小米/华为/OPPO/VIVO/应用宝):"
 echo "   👉 $SIGNED_APK"
-echo "2. Google Play 专属 AAB (App Bundle):"
+echo "2. 国际标准 GitHub 发行版:"
+echo "   👉 $PROJECT_ROOT/SmartPhotoFrame-v${VERSION}-release.apk"
+echo "3. Google Play 专属 AAB (App Bundle):"
 echo "   👉 $AAB_DEST"
-echo "3. 永久签名密钥文件 (切记备份勿遗失):"
+echo "4. 永久签名密钥文件 (切记备份勿遗失):"
 echo "   👉 $KEYSTORE"
 echo "=================================================="

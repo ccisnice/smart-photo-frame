@@ -41,6 +41,13 @@
     justify-content: center;
     background: #000;
     overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+  }
+  #stage:active {
+    cursor: grabbing;
   }
   .item {
     position: absolute;
@@ -69,7 +76,7 @@
     pointer-events: none;
   }
 
-  /* 前台高清主体内容：100% 保真不裁切，绝不切头切人像 */
+  /* 前台高清主体内容：100% 保真不裁切，禁止拖拽幽灵防止干扰手势 */
   .item img.media-el, .item video.media-el {
     position: relative;
     z-index: 2;
@@ -81,6 +88,9 @@
     box-shadow: 0 16px 50px rgba(0,0,0,0.85);
     border-radius: 6px;
     transform: translateZ(0);
+    pointer-events: none;
+    -webkit-user-drag: none;
+    user-select: none;
   }
 
   .item .meta {
@@ -99,50 +109,57 @@
   }
   .item.active .meta { opacity: 1; }
 
-  /* 计数器与网络指示 */
+  /* 计数器（位于左上角） */
   #counter {
     position: fixed;
     top: max(16px, env(safe-area-inset-top));
-    right: max(20px, env(safe-area-inset-right));
-    color: rgba(255,255,255,0.65);
+    left: max(20px, env(safe-area-inset-left));
+    color: rgba(255,255,255,0.75);
     font-size: 13px;
     font-weight: 500;
-    z-index: 5;
+    z-index: 20;
     opacity: 0;
     transition: opacity 0.4s;
-    background: rgba(0,0,0,0.45);
-    backdrop-filter: blur(8px);
-    padding: 4px 12px;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    padding: 5px 14px;
     border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    pointer-events: none;
   }
 
-  /* 悬浮扫码投送入口 (常态半透明微隐，触摸屏幕时亮起) */
+  /* 顶部常驻扫码投送入口 (优雅微透磨砂玻璃，永久清晰可见，绝不彻底消失) */
   #btn-qr-float {
     position: fixed;
+    top: max(16px, env(safe-area-inset-top));
     right: max(20px, env(safe-area-inset-right));
-    bottom: max(20px, env(safe-area-inset-bottom));
-    background: rgba(24, 24, 27, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(24, 24, 27, 0.82);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.18);
     color: #fff;
-    padding: 10px 18px;
+    padding: 8px 16px;
     border-radius: 30px;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     cursor: pointer;
-    z-index: 6;
+    z-index: 20;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    opacity: 0.25;
+    opacity: 0.8; /* 基础常驻清晰度，让初次与每次使用都一眼看到入口 */
   }
-  #btn-qr-float:hover, body.showui #btn-qr-float { opacity: 1; }
-  #btn-qr-float:active { transform: scale(0.95); }
+  #btn-qr-float:hover, body.showui #btn-qr-float {
+    opacity: 1;
+    transform: scale(1.03);
+    border-color: rgba(129, 140, 248, 0.6);
+    background: rgba(30, 30, 42, 0.95);
+    box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+  }
+  #btn-qr-float:active { transform: scale(0.96); }
 
-  /* 底部控制栏：无人触碰时自动沉浸隐藏，触摸屏幕即时浮现 */
+  /* 底部控制栏：无人触碰时沉浸隐藏，轻点屏幕即时浮现 */
   #bar {
     position: fixed;
     left: 50%;
@@ -151,17 +168,20 @@
     pointer-events: none;
     bottom: max(24px, env(safe-area-inset-bottom));
     height: var(--bar-h);
+    max-width: min(440px, calc(100vw - 32px));
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    background: rgba(24, 24, 27, 0.88);
+    background: rgba(24, 24, 27, 0.92);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.15);
     border-radius: 30px;
     padding: 0 16px;
-    z-index: 8;
+    z-index: 25;
     box-shadow: 0 12px 36px rgba(0,0,0,0.6);
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s;
+    box-sizing: border-box;
   }
   body.showui #bar { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
   body.showui #counter { opacity: 1; }
@@ -188,6 +208,84 @@
   .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.15); margin: 0 2px; }
   #interval { width: 92px; -webkit-appearance: none; appearance: none; text-align: center; }
 
+  /* 首次使用 / 空相框迎宾大卡片 */
+  #welcome-board {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    background: radial-gradient(circle at center, #181822 0%, #09090b 100%);
+    padding: 24px;
+    animation: fadeIn 0.4s ease-out;
+  }
+  .welcome-card {
+    background: rgba(24, 24, 27, 0.9);
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 28px;
+    padding: 36px 32px 30px;
+    text-align: center;
+    max-width: 440px;
+    width: 92%;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.8), 0 0 40px rgba(99, 102, 241, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .welcome-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .welcome-title {
+    font-size: 20px;
+    color: #fff;
+    font-weight: 600;
+    margin: 0;
+  }
+  .welcome-desc {
+    font-size: 13px;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .welcome-qr-box {
+    background: #fff;
+    padding: 14px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    margin: 4px 0;
+  }
+  .welcome-url {
+    font-family: monospace;
+    font-size: 12px;
+    color: #818cf8;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 6px 14px;
+    border-radius: 8px;
+    word-break: break-all;
+  }
+  .welcome-status {
+    font-size: 13px;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   /* 提示与状态 */
   #status {
     position: fixed;
@@ -213,7 +311,7 @@
     border-radius: 24px;
     font-size: 13px;
     font-weight: 500;
-    z-index: 12;
+    z-index: 40;
     opacity: 0;
     transition: opacity 0.4s;
     pointer-events: none;
@@ -234,6 +332,7 @@
     transition: opacity 0.3s ease;
   }
   #qr-modal.show { opacity: 1; pointer-events: auto; }
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
   .qr-card {
     background: #18181b;
     border: 1px solid rgba(255,255,255,0.15);
@@ -290,17 +389,15 @@
 <div id="status">正在加载相框…</div>
 <div id="hint">✨ 收到新照片，正在载入播放</div>
 
-<!-- 浮动扫码入口 -->
-<div id="btn-qr-float">
+<!-- 浮动扫码入口 (右上角常驻) -->
+<div id="btn-qr-float" title="点击展开投送二维码">
   <span>📱</span>
-  <span>手机扫码投照片</span>
+  <span>扫码投照片</span>
 </div>
 
 <!-- 底部控制条 -->
 <div id="bar">
-  <button class="btn" id="prev">‹</button>
-  <button class="btn" id="play">⏸</button>
-  <button class="btn" id="next">›</button>
+  <button class="btn" id="play" title="暂停 / 播放">⏸</button>
   <div class="sep"></div>
   <button class="btn" id="shuffle">🔀 关</button>
   <div class="sep"></div>
@@ -317,6 +414,20 @@
   <button class="btn" id="btn-delete" title="删除当前照片" style="color:#f87171;">🗑️</button>
 </div>
 
+<!-- 首次使用 / 空相框迎宾大卡片 (零门槛扫码指引) -->
+<div id="welcome-board" style="display:none;">
+  <div class="welcome-card">
+    <div class="welcome-badge">✨ 智能相框已就绪 · 首次配对</div>
+    <h2 class="welcome-title">用手机微信或相机 扫码投送照片</h2>
+    <p class="welcome-desc">请将手机连入同一家庭 Wi-Fi，扫描下方二维码，即可随时将照片与视频无线发送到此相框：</p>
+    <div class="welcome-qr-box" id="welcome-qr-container"></div>
+    <div class="welcome-url" id="welcome-qr-url">正在加载服务地址...</div>
+    <div class="welcome-status" id="welcome-net-status">
+      <span id="welcome-net-text">🟢 局域网服务就绪</span>
+    </div>
+  </div>
+</div>
+
 <!-- 扫码弹窗 -->
 <div id="qr-modal">
   <div class="qr-card">
@@ -326,9 +437,6 @@
     <div class="qr-url" id="qr-url-text">http://...</div>
     <div id="qr-net-status" style="margin-top:10px;font-size:13px;font-weight:500;"></div>
     <div id="qr-net-warning" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:12px;color:#fca5a5;line-height:1.4;"></div>
-    <div id="apk-dl-box" style="margin-top:12px;font-size:12px;color:#94a3b8;">
-      🤖 安卓平板或手机安装：<a href="/app.apk" download="智能相框.apk" style="color:#818cf8;font-weight:600;text-decoration:underline;">下载 智能相框.apk</a>
-    </div>
     <button class="btn-close-qr" id="btn-close-qr">关闭</button>
   </div>
 </div>
@@ -343,6 +451,10 @@ const btnQrFloat = document.getElementById('btn-qr-float');
 const btnCloseQr = document.getElementById('btn-close-qr');
 const qrContainer = document.getElementById('qrcode-container');
 const qrUrlText = document.getElementById('qr-url-text');
+const welcomeBoard = document.getElementById('welcome-board');
+const welcomeQrContainer = document.getElementById('welcome-qr-container');
+const welcomeQrUrl = document.getElementById('welcome-qr-url');
+const welcomeNetText = document.getElementById('welcome-net-text');
 
 let media = [];
 let idx = 0;
@@ -360,6 +472,53 @@ let isMuted = true;
 const isApp = !!(window.Capacitor || location.protocol === 'capacitor:' || (location.hostname === 'localhost' && location.port !== '8000'));
 const API_BASE = isApp ? 'http://127.0.0.1:8000' : '';
 
+// 统一离线生成高质量二维码（同时支持弹窗与迎宾大卡片）
+function renderQrCodes(url) {
+  if (!url) return;
+  
+  // 1. 控制栏/悬浮按钮点击弹窗二维码
+  if (qrContainer) {
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+      text: url,
+      width: 180,
+      height: 180,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+  if (qrUrlText) qrUrlText.textContent = url;
+
+  // 2. 首次启动/空相框迎宾大卡片二维码
+  if (welcomeQrContainer) {
+    welcomeQrContainer.innerHTML = '';
+    new QRCode(welcomeQrContainer, {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+  if (welcomeQrUrl) welcomeQrUrl.textContent = url;
+}
+
+function showWelcomeBoard() {
+  if (welcomeBoard) welcomeBoard.style.display = 'flex';
+  status.style.display = 'none';
+  counter.style.opacity = '0';
+  btnQrFloat.style.display = 'none';
+  if (uploadUrl) renderQrCodes(uploadUrl);
+}
+
+function hideWelcomeBoard() {
+  if (welcomeBoard) welcomeBoard.style.display = 'none';
+  status.style.display = 'none';
+  btnQrFloat.style.display = 'flex';
+}
+
 // 加载局域网服务信息与二维码
 async function initServerInfo() {
   try {
@@ -367,52 +526,51 @@ async function initServerInfo() {
     if (res.ok) {
       const data = await res.json();
       uploadUrl = data.upload_url;
-      qrUrlText.textContent = uploadUrl;
 
       const statusEl = document.getElementById('qr-net-status');
       const warnEl = document.getElementById('qr-net-warning');
-      const dlBox = document.getElementById('apk-dl-box');
 
       if (isApp) {
-        // 在 App 内部绝对不显示“下载 APK”按钮，避免误导
-        if (dlBox) dlBox.style.display = 'none';
-
         if (data.is_wifi) {
-          statusEl.innerHTML = `<span style="color:#10b981;">🟢 本机就绪 · 照片直传此平板</span><br><span style="color:#94a3b8;font-size:12px;">请确保手机连入同一个家庭 Wi-Fi</span>`;
-          warnEl.style.display = 'none';
+          const okHtml = `<span style="color:#10b981;">🟢 本机就绪 · 照片直传此平板</span><br><span style="color:#94a3b8;font-size:12px;">请确保手机连入同一个家庭 Wi-Fi</span>`;
+          if (statusEl) statusEl.innerHTML = okHtml;
+          if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#10b981;">🟢 已连入 Wi-Fi · 本机服务就绪</span>`;
+          if (warnEl) warnEl.style.display = 'none';
         } else {
-          statusEl.innerHTML = `<span style="color:#ef4444;">🔴 未连接家庭 Wi-Fi</span>`;
-          warnEl.textContent = data.warning || '请将此平板连接至家庭 Wi-Fi，手机才能局域网投送！';
-          warnEl.style.display = 'block';
+          const warnHtml = `<span style="color:#ef4444;">🔴 未连接家庭 Wi-Fi</span>`;
+          if (statusEl) statusEl.innerHTML = warnHtml;
+          if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#ef4444;">🔴 未连接家庭 Wi-Fi（请在平板设置中连上 Wi-Fi）</span>`;
+          if (warnEl) {
+            warnEl.textContent = data.warning || '请将此平板连接至家庭 Wi-Fi，手机才能局域网投送！';
+            warnEl.style.display = 'block';
+          }
         }
       } else {
-        if (dlBox) dlBox.style.display = 'block';
+        if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#10b981;">🟢 局域网服务运行中</span>`;
       }
 
-      // 生成离线二维码
-      qrContainer.innerHTML = '';
-      new QRCode(qrContainer, {
-        text: uploadUrl,
-        width: 180,
-        height: 180,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-      });
+      renderQrCodes(uploadUrl);
     }
   } catch (e) {
     console.error('获取服务信息失败', e);
   }
 }
 
-// 二维码弹窗事件
+// 二维码弹窗事件 (右上角按钮)
 btnQrFloat.onclick = (e) => {
   e.stopPropagation();
   qrModal.classList.add('show');
+  pokeUI();
 };
-btnCloseQr.onclick = () => qrModal.classList.remove('show');
+btnCloseQr.onclick = () => {
+  qrModal.classList.remove('show');
+  pokeUI();
+};
 qrModal.onclick = (e) => {
-  if (e.target === qrModal) qrModal.classList.remove('show');
+  if (e.target === qrModal) {
+    qrModal.classList.remove('show');
+    pokeUI();
+  }
 };
 
 // 轮播核心逻辑
@@ -437,11 +595,10 @@ function updateMediaList(newList, isInitial = false) {
   });
 
   if (!newList.length) {
-    status.style.display = 'block';
-    status.innerHTML = '相框是空的<br><br><span style="font-size:14px;color:#818cf8;cursor:pointer" onclick="qrModal.classList.add(\'show\')">点我打开手机扫码投送二维码</span>';
+    showWelcomeBoard();
     return;
   }
-  status.style.display = 'none';
+  hideWelcomeBoard();
 
   // 如果列表没有实质变化，直接退出，避免破坏正在下载的图片流
   if (!isInitial && newList.length === media.length && newList.every((m, i) => m.name === media[i].name && m.mtime === media[i].mtime)) {
@@ -626,12 +783,17 @@ function togglePlay() {
   }
 }
 
-// 控制栏自动隐藏交互
+// 控制栏自动隐藏交互：延长时间至 5 秒，反应更从容
 let uiTimer;
 function pokeUI() {
   document.body.classList.add('showui');
   clearTimeout(uiTimer);
-  uiTimer = setTimeout(() => document.body.classList.remove('showui'), 3000);
+  uiTimer = setTimeout(() => {
+    // 若二维码弹窗正在展示中，绝不收起控制背景
+    if (!qrModal.classList.contains('show')) {
+      document.body.classList.remove('showui');
+    }
+  }, 5000);
 }
 
 function showToast(msg) {
@@ -640,8 +802,6 @@ function showToast(msg) {
   setTimeout(() => { hint.style.opacity = '0'; }, 3500);
 }
 
-document.getElementById('prev').onclick = (e) => { e.stopPropagation(); prev(); pokeUI(); };
-document.getElementById('next').onclick = (e) => { e.stopPropagation(); next(); pokeUI(); };
 document.getElementById('play').onclick = (e) => { e.stopPropagation(); togglePlay(); pokeUI(); };
 document.getElementById('shuffle').onclick = (e) => {
   e.stopPropagation();
@@ -685,8 +845,7 @@ document.getElementById('btn-delete').onclick = async (e) => {
         if (media.length > 0) {
           show(idx % media.length);
         } else {
-          status.style.display = 'block';
-          status.innerHTML = '相框是空的<br><br><span style="font-size:14px;color:#818cf8;cursor:pointer" onclick="qrModal.classList.add(\'show\')">点我打开手机扫码投送二维码</span>';
+          showWelcomeBoard();
         }
       } else {
         alert('删除失败，请稍后重试');
@@ -697,57 +856,63 @@ document.getElementById('btn-delete').onclick = async (e) => {
   }
   pokeUI();
 };
-// 交互改造：
-// 1. 点击屏幕：仅唤出底部控制栏 3 秒，绝不打断播放！
-stage.addEventListener('click', () => { pokeUI(); });
-document.body.addEventListener('mousemove', pokeUI);
 
-// 2. 屏幕左右滑动手势切照片（横滑切换，符合相册直觉）
-let touchStartX = 0;
-let touchStartY = 0;
-let touchEndX = 0;
-let touchEndY = 0;
-let isSwiping = false;
+// ==========================================
+// 交互改造：统一支持触屏滑动手势 + 电脑鼠标按住左右拖拽
+// ==========================================
+let pointerStartX = 0;
+let pointerStartY = 0;
+let pointerCurrentX = 0;
+let pointerCurrentY = 0;
+let isPointerDown = false;
 
-stage.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchEndX = touchStartX;
-    touchEndY = touchStartY;
-    isSwiping = true;
-  }
-}, { passive: true });
-
-stage.addEventListener('touchmove', (e) => {
-  if (isSwiping && e.touches.length === 1) {
-    touchEndX = e.touches[0].clientX;
-    touchEndY = e.touches[0].clientY;
-  }
-}, { passive: true });
-
-stage.addEventListener('touchend', () => {
-  if (!isSwiping) return;
-  isSwiping = false;
-  const deltaX = touchEndX - touchStartX;
-  const deltaY = touchEndY - touchStartY;
-
-  // 滑动判定：水平滑动距离 > 40px，且水平位移明显大于垂直位移 (1.2倍)
-  if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
-    if (deltaX < 0) {
-      // 👈 向左滑动：下一张
-      console.log('手势向左滑：下一张');
-      next();
-    } else {
-      // 👉 向右滑动：上一张
-      console.log('手势向右滑：上一张');
-      prev();
-    }
-  }
-  pokeUI();
+stage.addEventListener('pointerdown', (e) => {
+  // 仅响应鼠标左键或触屏
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  pointerStartX = e.clientX;
+  pointerStartY = e.clientY;
+  pointerCurrentX = e.clientX;
+  pointerCurrentY = e.clientY;
+  isPointerDown = true;
 });
 
-// 3. 键盘左右方向键与空格快捷键（兼容外接键盘）
+window.addEventListener('pointermove', (e) => {
+  if (!isPointerDown) return;
+  pointerCurrentX = e.clientX;
+  pointerCurrentY = e.clientY;
+});
+
+window.addEventListener('pointerup', () => {
+  if (!isPointerDown) return;
+  isPointerDown = false;
+  const deltaX = pointerCurrentX - pointerStartX;
+  const deltaY = pointerCurrentY - pointerStartY;
+
+  // 滑动/拖拽判定：水平拖动位移 > 35px，且水平明显大于垂直位移 (1.2倍)
+  if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+    if (deltaX < 0) {
+      // 👈 向左滑动 / 鼠标按住向左拖：下一张
+      console.log('向左滑动/拖拽：切换到下一张');
+      next();
+    } else {
+      // 👉 向右滑动 / 鼠标按住向右拖：上一张
+      console.log('向右滑动/拖拽：切换到上一张');
+      prev();
+    }
+    pokeUI();
+  } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
+    // 纯粹轻点（无明显拖拽）：仅唤出底部控制栏 3 秒，绝不打断播放！
+    pokeUI();
+  }
+});
+
+stage.addEventListener('pointercancel', () => {
+  isPointerDown = false;
+});
+
+document.body.addEventListener('mousemove', pokeUI);
+
+// 键盘左右方向键与空格快捷键（兼容外接键盘的平板或电脑）
 window.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
     next();
@@ -760,6 +925,7 @@ window.addEventListener('keydown', (e) => {
     pokeUI();
   }
 });
+
 
 // 实时自动轮询检测手机上传的新照片（每 5 秒一次）
 setInterval(async () => {
@@ -798,6 +964,11 @@ requestWakeLock();
 pokeUI();
 initServerInfo();
 load();
+setTimeout(() => {
+  if (media.length > 0) {
+    showToast('💡 提示：点击右上角或轻触屏幕，可随时扫码投送照片');
+  }
+}, 1200);
 </script>
 </body>
 </html>
