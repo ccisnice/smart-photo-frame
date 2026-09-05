@@ -477,6 +477,8 @@ public class PhotoFrameServer extends NanoHTTPD {
         resp.addHeader("Access-Control-Allow-Origin", "*");
         resp.addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
         resp.addHeader("Access-Control-Allow-Headers", "Content-Type, Range, Authorization, Origin, X-Requested-With, X-Filename, *");
+        resp.addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        resp.addHeader("Pragma", "no-cache");
     }
 
     private String getMimeType(String name) {

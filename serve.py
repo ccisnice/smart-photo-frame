@@ -93,6 +93,13 @@ class FrameHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def end_headers(self):
+        if not any(h.startswith(b"Access-Control-Allow-Origin:") for h in getattr(self, "_headers_buffer", [])):
+            self.send_header("Access-Control-Allow-Origin", "*")
+        if not any(h.startswith(b"Cache-Control:") for h in getattr(self, "_headers_buffer", [])):
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        super().end_headers()
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
