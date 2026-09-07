@@ -471,7 +471,13 @@ const UPLOAD_I18N = {
   }
 };
 
-let currentLang = localStorage.getItem('photo_frame_lang') || 'en'; // Default to English!
+function detectInitialLang() {
+  const saved = localStorage.getItem('photo_frame_lang');
+  if (saved && (saved === 'zh' || saved === 'en')) return saved;
+  const sys = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+  return sys.startsWith('zh') ? 'zh' : 'en';
+}
+let currentLang = detectInitialLang();
 
 function applyLanguage() {
   const t = UPLOAD_I18N[currentLang] || UPLOAD_I18N.en;

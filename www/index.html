@@ -440,11 +440,7 @@
     <div id="qr-net-status" style="margin-top:6px;font-size:13px;font-weight:500;"></div>
     <div id="qr-net-warning" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:12px;color:#fca5a5;line-height:1.4;"></div>
     
-    <!-- Sponsor links in modal -->
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:2px;">
-      <a href="https://ko-fi.com/chenxu1985" target="_blank" style="font-size:12px;color:#ff5e5b;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:rgba(255,94,91,0.12);padding:5px 12px;border-radius:12px;border:1px solid rgba(255,94,91,0.25);">☕ Ko-fi</a>
-      <a href="https://afdian.com/a/cash1985" target="_blank" style="font-size:12px;color:#a78bfa;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:rgba(167,139,250,0.12);padding:5px 12px;border-radius:12px;border:1px solid rgba(167,139,250,0.25);">⚡ 爱发电</a>
-    </div>
+
 
     <button class="btn-close-qr" id="btn-close-qr">Close</button>
   </div>
@@ -561,7 +557,13 @@ const I18N = {
   }
 };
 
-let currentLang = localStorage.getItem('photo_frame_lang') || 'en'; // Default to English!
+function detectInitialLang() {
+  const saved = localStorage.getItem('photo_frame_lang');
+  if (saved && (saved === 'zh' || saved === 'en')) return saved;
+  const sys = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+  return sys.startsWith('zh') ? 'zh' : 'en';
+}
+let currentLang = detectInitialLang();
 
 function applyLanguage() {
   const t = I18N[currentLang] || I18N.en;
