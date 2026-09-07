@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>智能相框</title>
+<title>Smart Photo Frame</title>
 
 <!-- PWA 独立桌面 App 规范标签 -->
 <link rel="manifest" href="/manifest.json">
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="智能相框">
+<meta name="apple-mobile-web-app-title" content="Smart Photo Frame">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
 
@@ -148,7 +148,7 @@
     cursor: pointer;
     z-index: 20;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    opacity: 0.8; /* 基础常驻清晰度，让初次与每次使用都一眼看到入口 */
+    opacity: 0.8;
   }
   #btn-qr-float:hover, body.showui #btn-qr-float {
     opacity: 1;
@@ -168,7 +168,7 @@
     pointer-events: none;
     bottom: max(24px, env(safe-area-inset-bottom));
     height: var(--bar-h);
-    max-width: min(440px, calc(100vw - 32px));
+    max-width: min(500px, calc(100vw - 20px));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -345,7 +345,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
   .qr-card h3 { font-size: 19px; color: #fff; font-weight: 600; }
   .qr-card p { font-size: 13px; color: #a1a1aa; line-height: 1.5; }
@@ -386,44 +386,46 @@
 
 <div id="stage"></div>
 <div id="counter"></div>
-<div id="status">正在加载相框…</div>
-<div id="hint">✨ 收到新照片，正在载入播放</div>
+<div id="status">Loading photo frame...</div>
+<div id="hint">✨ Received new photos, loading slideshow</div>
 
 <!-- 浮动扫码入口 (右上角常驻) -->
-<div id="btn-qr-float" title="点击展开投送二维码">
+<div id="btn-qr-float" title="Click to show cast QR code">
   <span>📱</span>
-  <span>扫码投照片</span>
+  <span id="btn-qr-float-text">Send Photos</span>
 </div>
 
 <!-- 底部控制条 -->
 <div id="bar">
-  <button class="btn" id="play" title="暂停 / 播放">⏸</button>
+  <button class="btn" id="play" title="Play / Pause">⏸</button>
   <div class="sep"></div>
-  <button class="btn" id="shuffle">🔀 关</button>
+  <button class="btn" id="shuffle">🔀 Off</button>
   <div class="sep"></div>
-  <select class="btn" id="interval" title="照片轮播间隔（视频将自动完整播放完毕）">
-    <option value="5">照片 5秒</option>
-    <option value="8" selected>照片 8秒</option>
-    <option value="12">照片 12秒</option>
-    <option value="20">照片 20秒</option>
-    <option value="30">照片 30秒</option>
+  <select class="btn" id="interval" title="Photo slideshow interval (video plays in full)">
+    <option value="5">Photo 5s</option>
+    <option value="8" selected>Photo 8s</option>
+    <option value="12">Photo 12s</option>
+    <option value="20">Photo 20s</option>
+    <option value="30">Photo 30s</option>
   </select>
   <div class="sep"></div>
-  <button class="btn" id="btn-sound" title="声音开关">🔇</button>
+  <button class="btn" id="btn-sound" title="Sound Muted / Unmuted">🔇</button>
   <div class="sep"></div>
-  <button class="btn" id="btn-delete" title="删除当前照片" style="color:#f87171;">🗑️</button>
+  <button class="btn" id="btn-delete" title="Delete current photo" style="color:#f87171;">🗑️</button>
+  <div class="sep"></div>
+  <button class="btn" id="btn-lang" title="Switch Language / 切换语言" style="font-size:12px;padding:0 8px;">🌐 EN</button>
 </div>
 
 <!-- 首次使用 / 空相框迎宾大卡片 (零门槛扫码指引) -->
 <div id="welcome-board" style="display:none;">
   <div class="welcome-card">
-    <div class="welcome-badge">✨ 智能相框已就绪 · 首次配对</div>
-    <h2 class="welcome-title">用手机微信或相机 扫码投送照片</h2>
-    <p class="welcome-desc">请将手机连入同一家庭 Wi-Fi，扫描下方二维码，即可随时将照片与视频无线发送到此相框：</p>
+    <div class="welcome-badge" id="welcome-badge">✨ Smart Photo Frame · Ready for Pairing</div>
+    <h2 class="welcome-title" id="welcome-title">Scan with Phone to Cast Photos</h2>
+    <p class="welcome-desc" id="welcome-desc">Connect phone to same Wi-Fi, scan QR code below to wirelessly send photos & videos to this frame:</p>
     <div class="welcome-qr-box" id="welcome-qr-container"></div>
-    <div class="welcome-url" id="welcome-qr-url">正在加载服务地址...</div>
+    <div class="welcome-url" id="welcome-qr-url">Loading server address...</div>
     <div class="welcome-status" id="welcome-net-status">
-      <span id="welcome-net-text">🟢 局域网服务就绪</span>
+      <span id="welcome-net-text">🟢 LAN Service Ready</span>
     </div>
   </div>
 </div>
@@ -431,13 +433,20 @@
 <!-- 扫码弹窗 -->
 <div id="qr-modal">
   <div class="qr-card">
-    <h3>📱 手机扫码投送相片</h3>
-    <p>手机连上同一个家庭 Wi-Fi 后，用微信或自带相机扫码，即可挑选照片直接发到此相框：</p>
+    <h3 id="qr-modal-title">📱 Scan to Cast Photos</h3>
+    <p id="qr-modal-desc">Connect phone to the same Wi-Fi, then scan with camera to send photos directly to this frame:</p>
     <div class="qr-box" id="qrcode-container"></div>
     <div class="qr-url" id="qr-url-text">http://...</div>
-    <div id="qr-net-status" style="margin-top:10px;font-size:13px;font-weight:500;"></div>
-    <div id="qr-net-warning" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:12px;color:#fca5a5;line-height:1.4;"></div>
-    <button class="btn-close-qr" id="btn-close-qr">关闭</button>
+    <div id="qr-net-status" style="margin-top:6px;font-size:13px;font-weight:500;"></div>
+    <div id="qr-net-warning" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:12px;color:#fca5a5;line-height:1.4;"></div>
+    
+    <!-- Sponsor links in modal -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:2px;">
+      <a href="https://ko-fi.com/chenxu1985" target="_blank" style="font-size:12px;color:#ff5e5b;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:rgba(255,94,91,0.12);padding:5px 12px;border-radius:12px;border:1px solid rgba(255,94,91,0.25);">☕ Ko-fi</a>
+      <a href="https://afdian.com/a/cash1985" target="_blank" style="font-size:12px;color:#a78bfa;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:rgba(167,139,250,0.12);padding:5px 12px;border-radius:12px;border:1px solid rgba(167,139,250,0.25);">⚡ 爱发电</a>
+    </div>
+
+    <button class="btn-close-qr" id="btn-close-qr">Close</button>
   </div>
 </div>
 
@@ -465,10 +474,171 @@ let interval = 8;
 let currentEl = null;
 let uploadUrl = '';
 let isMuted = true;
+let lastServerData = null;
+
+const I18N = {
+  en: {
+    appTitle: 'Smart Photo Frame',
+    loading: 'Loading photo frame...',
+    offlineWarn: 'Unable to connect to photo frame service. Please ensure LAN service is running.',
+    startingLocal: 'Starting local photo frame service, please wait...',
+    btnQrFloat: 'Send Photos',
+    floatTitle: 'Click to show cast QR code',
+    playTitle: 'Play / Pause',
+    shuffleOn: '🔀 On',
+    shuffleOff: '🔀 Off',
+    intervalTitle: 'Photo slideshow interval (video plays in full)',
+    opt5s: 'Photo 5s',
+    opt8s: 'Photo 8s',
+    opt12s: 'Photo 12s',
+    opt20s: 'Photo 20s',
+    opt30s: 'Photo 30s',
+    soundTitle: 'Sound On / Off',
+    deleteTitle: 'Delete current photo',
+    langBtn: '🌐 EN',
+    langTitle: 'Switch to Chinese / 切换为中文',
+    welcomeBadge: '✨ Smart Photo Frame · Ready for Pairing',
+    welcomeTitle: 'Scan with Phone to Cast Photos',
+    welcomeDesc: 'Connect phone to same Wi-Fi, scan QR code below to wirelessly send photos & videos to this frame:',
+    welcomeLoadingUrl: 'Loading server address...',
+    welcomeNetOk: '🟢 LAN Service Ready',
+    welcomeNetWifiOk: '🟢 Connected to Wi-Fi · Service Ready',
+    welcomeNetWifiWarn: '🔴 Not connected to home Wi-Fi (Please connect in settings)',
+    qrModalTitle: '📱 Scan to Cast Photos',
+    qrModalDesc: 'Connect phone to the same Wi-Fi, then scan with camera to send photos directly to this frame:',
+    qrNetOk: '🟢 Device Ready · Photos cast directly to this tablet',
+    qrNetSub: 'Please make sure phone is connected to the same home Wi-Fi',
+    qrNetWarn: '🔴 Not connected to home Wi-Fi',
+    qrNetWarnTip: 'Please connect this tablet to home Wi-Fi so phones can cast photos via LAN!',
+    btnClose: 'Close',
+    toastNewPhotos: (n) => `✨ Received ${n} new photo${n > 1 ? 's' : ''}, loading slideshow`,
+    toastDeleted: '🗑️ Photo deleted successfully',
+    toastTip: '💡 Tip: Tap top-right or screen anytime to cast photos',
+    confirmDelete: (name) => `Are you sure you want to delete "${name}" from this frame?`,
+    deleteFailed: 'Failed to delete, please try again.',
+    netError: 'Network error, failed to delete.',
+  },
+  zh: {
+    appTitle: '智能相框',
+    loading: '正在加载相框…',
+    offlineWarn: '无法连接相框服务，请确认局域网服务已启动',
+    startingLocal: '正在启动本地相框服务，请稍候...',
+    btnQrFloat: '扫码投照片',
+    floatTitle: '点击展开投送二维码',
+    playTitle: '暂停 / 播放',
+    shuffleOn: '🔀 开',
+    shuffleOff: '🔀 关',
+    intervalTitle: '照片轮播间隔（视频将自动完整播放完毕）',
+    opt5s: '照片 5秒',
+    opt8s: '照片 8秒',
+    opt12s: '照片 12秒',
+    opt20s: '照片 20秒',
+    opt30s: '照片 30秒',
+    soundTitle: '声音开关',
+    deleteTitle: '删除当前照片',
+    langBtn: '🌐 中',
+    langTitle: 'Switch to English / 切换为英文',
+    welcomeBadge: '✨ 智能相框已就绪 · 首次配对',
+    welcomeTitle: '用手机微信或相机 扫码投送照片',
+    welcomeDesc: '请将手机连入同一家庭 Wi-Fi，扫描下方二维码，即可随时将照片与视频无线发送到此相框：',
+    welcomeLoadingUrl: '正在加载服务地址...',
+    welcomeNetOk: '🟢 局域网服务就绪',
+    welcomeNetWifiOk: '🟢 已连入 Wi-Fi · 本机服务就绪',
+    welcomeNetWifiWarn: '🔴 未连接家庭 Wi-Fi（请在平板设置中连上 Wi-Fi）',
+    qrModalTitle: '📱 手机扫码投送相片',
+    qrModalDesc: '手机连上同一个家庭 Wi-Fi 后，用微信或自带相机扫码，即可挑选照片直接发到此相框：',
+    qrNetOk: '🟢 本机就绪 · 照片直传此平板',
+    qrNetSub: '请确保手机连入同一个家庭 Wi-Fi',
+    qrNetWarn: '🔴 未连接家庭 Wi-Fi',
+    qrNetWarnTip: '请将此平板连接至家庭 Wi-Fi，手机才能局域网投送！',
+    btnClose: '关闭',
+    toastNewPhotos: (n) => `✨ 收到 ${n} 张新照片，正在载入播放`,
+    toastDeleted: '🗑️ 已成功删除照片',
+    toastTip: '💡 提示：点击右上角或轻触屏幕，可随时扫码投送照片',
+    confirmDelete: (name) => `确定要从相框中删除这张照片「${name}」吗？`,
+    deleteFailed: '删除失败，请稍后重试',
+    netError: '网络异常，删除失败',
+  }
+};
+
+let currentLang = localStorage.getItem('photo_frame_lang') || 'en'; // Default to English!
+
+function applyLanguage() {
+  const t = I18N[currentLang] || I18N.en;
+  document.title = t.appTitle;
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+
+  const qrFloatSpan = document.getElementById('btn-qr-float-text');
+  if (qrFloatSpan) qrFloatSpan.textContent = t.btnQrFloat;
+  btnQrFloat.title = t.floatTitle;
+
+  const btnLang = document.getElementById('btn-lang');
+  if (btnLang) {
+    btnLang.textContent = t.langBtn;
+    btnLang.title = t.langTitle;
+  }
+
+  document.getElementById('play').title = t.playTitle;
+  document.getElementById('shuffle').textContent = shuffle ? t.shuffleOn : t.shuffleOff;
+
+  const intervalEl = document.getElementById('interval');
+  if (intervalEl) {
+    intervalEl.title = t.intervalTitle;
+    if (intervalEl.options && intervalEl.options.length >= 5) {
+      intervalEl.options[0].textContent = t.opt5s;
+      intervalEl.options[1].textContent = t.opt8s;
+      intervalEl.options[2].textContent = t.opt12s;
+      intervalEl.options[3].textContent = t.opt20s;
+      intervalEl.options[4].textContent = t.opt30s;
+    }
+  }
+
+  document.getElementById('btn-sound').title = t.soundTitle;
+  document.getElementById('btn-delete').title = t.deleteTitle;
+
+  const wBadge = document.getElementById('welcome-badge');
+  if (wBadge) wBadge.textContent = t.welcomeBadge;
+  const wTitle = document.getElementById('welcome-title');
+  if (wTitle) wTitle.textContent = t.welcomeTitle;
+  const wDesc = document.getElementById('welcome-desc');
+  if (wDesc) wDesc.textContent = t.welcomeDesc;
+
+  const qTitle = document.getElementById('qr-modal-title');
+  if (qTitle) qTitle.textContent = t.qrModalTitle;
+  const qDesc = document.getElementById('qr-modal-desc');
+  if (qDesc) qDesc.textContent = t.qrModalDesc;
+  if (btnCloseQr) btnCloseQr.textContent = t.btnClose;
+
+  if (lastServerData) {
+    updateNetStatusDisplay(lastServerData);
+  }
+}
+
+function updateNetStatusDisplay(data) {
+  lastServerData = data;
+  const t = I18N[currentLang] || I18N.en;
+  const statusEl = document.getElementById('qr-net-status');
+  const warnEl = document.getElementById('qr-net-warning');
+
+  if (isApp) {
+    if (data.is_wifi) {
+      if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;">${t.qrNetOk}</span><br><span style="color:#94a3b8;font-size:12px;">${t.qrNetSub}</span>`;
+      if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#10b981;">${t.welcomeNetWifiOk}</span>`;
+      if (warnEl) warnEl.style.display = 'none';
+    } else {
+      if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444;">${t.qrNetWarn}</span>`;
+      if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#ef4444;">${t.welcomeNetWifiWarn}</span>`;
+      if (warnEl) {
+        warnEl.textContent = data.warning || t.qrNetWarnTip;
+        warnEl.style.display = 'block';
+      }
+    }
+  } else {
+    if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#10b981;">${t.welcomeNetOk}</span>`;
+  }
+}
 
 // 自动嗅探运行环境：
-// 1. 如果在安卓/iOS App 容器中运行 (window.Capacitor)，连接本地内嵌微服务 (http://127.0.0.1:8000)
-// 2. 如果在普通网页浏览器访问，使用相对路径
 const isApp = !!(window.Capacitor || location.protocol === 'capacitor:' || (location.hostname === 'localhost' && location.port !== '8000'));
 const API_BASE = isApp ? 'http://127.0.0.1:8000' : '';
 
@@ -526,29 +696,7 @@ async function initServerInfo() {
     if (res.ok) {
       const data = await res.json();
       uploadUrl = data.upload_url;
-
-      const statusEl = document.getElementById('qr-net-status');
-      const warnEl = document.getElementById('qr-net-warning');
-
-      if (isApp) {
-        if (data.is_wifi) {
-          const okHtml = `<span style="color:#10b981;">🟢 本机就绪 · 照片直传此平板</span><br><span style="color:#94a3b8;font-size:12px;">请确保手机连入同一个家庭 Wi-Fi</span>`;
-          if (statusEl) statusEl.innerHTML = okHtml;
-          if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#10b981;">🟢 已连入 Wi-Fi · 本机服务就绪</span>`;
-          if (warnEl) warnEl.style.display = 'none';
-        } else {
-          const warnHtml = `<span style="color:#ef4444;">🔴 未连接家庭 Wi-Fi</span>`;
-          if (statusEl) statusEl.innerHTML = warnHtml;
-          if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#ef4444;">🔴 未连接家庭 Wi-Fi（请在平板设置中连上 Wi-Fi）</span>`;
-          if (warnEl) {
-            warnEl.textContent = data.warning || '请将此平板连接至家庭 Wi-Fi，手机才能局域网投送！';
-            warnEl.style.display = 'block';
-          }
-        }
-      } else {
-        if (welcomeNetText) welcomeNetText.innerHTML = `<span style="color:#10b981;">🟢 局域网服务运行中</span>`;
-      }
-
+      updateNetStatusDisplay(data);
       renderQrCodes(uploadUrl);
     }
   } catch (e) {
@@ -580,7 +728,8 @@ async function load() {
     const data = await res.json();
     updateMediaList(data, true);
   } catch(e) {
-    status.textContent = isApp ? '正在启动本地相框服务，请稍候...' : '无法连接相框服务，请确认局域网服务已启动';
+    const t = I18N[currentLang] || I18N.en;
+    status.textContent = isApp ? t.startingLocal : t.offlineWarn;
     setTimeout(load, 2000);
     return;
   }
@@ -610,7 +759,8 @@ function updateMediaList(newList, isInitial = false) {
   const newItems = newList.filter(m => !oldUrls.has(m.url));
 
   if (!isInitial && newItems.length > 0) {
-    showToast(`✨ 收到 ${newItems.length} 张新照片，正在载入播放`);
+    const t = I18N[currentLang] || I18N.en;
+    showToast(t.toastNewPhotos(newItems.length));
   }
 
   // 如果当前正有一段视频在播放，不要强行打断清屏，等视频播完下一轮再更新
@@ -645,7 +795,7 @@ function buildItem(m) {
   const div = document.createElement('div');
   div.className = 'item';
 
-  // 1. 动态高斯模糊流光背景（解决竖屏照片和视频两侧黑边，营造艺术氛围感）
+  // 1. 动态高斯模糊流光背景
   const bg = document.createElement('div');
   bg.className = 'ambient-bg';
   if (m.type === 'image') {
@@ -660,19 +810,17 @@ function buildItem(m) {
   if (m.type === 'video') {
     el = document.createElement('video');
     el.src = m.url;
-    el.muted = true; // 初始一律静音
-    el.volume = 0;   // 音量硬件归零，杜绝任何解码初期杂音
+    el.muted = true;
+    el.volume = 0;
     el.playsInline = true;
     el.setAttribute('playsinline', '');
     el.setAttribute('webkit-playsinline', '');
     el.loop = false;
-    el.preload = 'metadata'; // 避免后台同时解码大量视频造成声卡/显卡抢占
-    // 核心：视频播完触发 ended，自然平滑切换到下一张
+    el.preload = 'metadata';
     el.addEventListener('ended', () => {
       console.log('视频完整播放完毕，自动切下一张:', m.name);
       if (playing) next();
     });
-    // 动态获取真实时长，确保长视频绝不被提早打断
     el.addEventListener('loadedmetadata', () => {
       if (currentEl === div && playing) {
         setVideoSafetyWatchdog(el);
@@ -707,11 +855,9 @@ function buildItem(m) {
 
 function setVideoSafetyWatchdog(videoEl) {
   clearTimeout(timer);
-  // 视频绝不仅播8秒！视频始终完整播放，直至自然结束。
-  // 兜底定时器仅用于防止个别视频解码挂死导致卡屏
   const dur = (videoEl && videoEl.duration && !isNaN(videoEl.duration) && videoEl.duration > 0)
     ? Math.ceil(videoEl.duration) + 3
-    : 300; // 未拿到时长前给足 5 分钟缓冲
+    : 300;
   timer = setTimeout(() => {
     console.log('视频安全守护触发（防止卡死），自动循环下一张');
     if (playing) next();
@@ -723,7 +869,6 @@ function show(i) {
   if (!next_item) return;
   clearTimeout(timer);
 
-  // 关键修复：切换前强制暂停所有视频 + 硬件级双保险静音(muted + volume=0)，彻底封死背景音泄露
   document.querySelectorAll('video').forEach(v => {
     try {
       v.pause();
@@ -743,7 +888,6 @@ function show(i) {
     setVideoSafetyWatchdog(next_item.mediaEl);
 
     try {
-      // 仅对当前激活视频恢复用户的声音开关设置
       next_item.mediaEl.volume = isMuted ? 0 : 1.0;
       next_item.mediaEl.muted = isMuted;
       next_item.mediaEl.currentTime = 0;
@@ -809,13 +953,12 @@ function togglePlay() {
   }
 }
 
-// 控制栏自动隐藏交互：延长时间至 5 秒，反应更从容
+// 控制栏自动隐藏交互：延长时间至 5 秒
 let uiTimer;
 function pokeUI() {
   document.body.classList.add('showui');
   clearTimeout(uiTimer);
   uiTimer = setTimeout(() => {
-    // 若二维码弹窗正在展示中，绝不收起控制背景
     if (!qrModal.classList.contains('show')) {
       document.body.classList.remove('showui');
     }
@@ -832,8 +975,17 @@ document.getElementById('play').onclick = (e) => { e.stopPropagation(); togglePl
 document.getElementById('shuffle').onclick = (e) => {
   e.stopPropagation();
   shuffle = !shuffle;
-  document.getElementById('shuffle').textContent = shuffle ? '🔀 开' : '🔀 关';
+  const t = I18N[currentLang] || I18N.en;
+  document.getElementById('shuffle').textContent = shuffle ? t.shuffleOn : t.shuffleOff;
   pokeUI();
+};
+document.getElementById('btn-lang').onclick = (e) => {
+  e.stopPropagation();
+  currentLang = currentLang === 'en' ? 'zh' : 'en';
+  localStorage.setItem('photo_frame_lang', currentLang);
+  applyLanguage();
+  pokeUI();
+  showToast(currentLang === 'en' ? '🌐 Switched to English' : '🌐 已切换为简体中文');
 };
 document.getElementById('interval').onchange = (e) => {
   interval = +e.target.value;
@@ -844,7 +996,6 @@ document.getElementById('btn-sound').onclick = (e) => {
   e.stopPropagation();
   isMuted = !isMuted;
   document.getElementById('btn-sound').textContent = isMuted ? '🔇' : '🔊';
-  // 仅对当前正播放的视频开启声音，其余非激活视频一律保持静音
   if (currentEl && media[idx] && media[idx].type === 'video' && media[idx].mediaEl) {
     media[idx].mediaEl.volume = isMuted ? 0 : 1.0;
     media[idx].mediaEl.muted = isMuted;
@@ -855,11 +1006,12 @@ document.getElementById('btn-delete').onclick = async (e) => {
   e.stopPropagation();
   if (!media.length || !media[idx]) return;
   const current = media[idx];
-  if (confirm(`确定要从相框中删除这张照片「${current.name}」吗？`)) {
+  const t = I18N[currentLang] || I18N.en;
+  if (confirm(t.confirmDelete(current.name))) {
     try {
       const res = await fetch(`${API_BASE}/api/delete?name=${encodeURIComponent(current.name)}`, { method: 'POST' });
       if (res.ok) {
-        showToast(`🗑️ 已成功删除照片`);
+        showToast(t.toastDeleted);
         if (current.type === 'video' && current.mediaEl) {
           try {
             current.mediaEl.pause();
@@ -878,18 +1030,16 @@ document.getElementById('btn-delete').onclick = async (e) => {
           showWelcomeBoard();
         }
       } else {
-        alert('删除失败，请稍后重试');
+        alert(t.deleteFailed);
       }
     } catch(err) {
-      alert('网络异常，删除失败');
+      alert(t.netError);
     }
   }
   pokeUI();
 };
 
-// ==========================================
-// 交互改造：统一支持触屏滑动手势 + 电脑鼠标按住左右拖拽
-// ==========================================
+// 交互改造：手势与拖拽
 let pointerStartX = 0;
 let pointerStartY = 0;
 let pointerCurrentX = 0;
@@ -897,7 +1047,6 @@ let pointerCurrentY = 0;
 let isPointerDown = false;
 
 stage.addEventListener('pointerdown', (e) => {
-  // 仅响应鼠标左键或触屏
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   pointerStartX = e.clientX;
   pointerStartY = e.clientY;
@@ -918,20 +1067,14 @@ window.addEventListener('pointerup', () => {
   const deltaX = pointerCurrentX - pointerStartX;
   const deltaY = pointerCurrentY - pointerStartY;
 
-  // 滑动/拖拽判定：水平拖动位移 > 35px，且水平明显大于垂直位移 (1.2倍)
   if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
     if (deltaX < 0) {
-      // 👈 向左滑动 / 鼠标按住向左拖：下一张
-      console.log('向左滑动/拖拽：切换到下一张');
       next();
     } else {
-      // 👉 向右滑动 / 鼠标按住向右拖：上一张
-      console.log('向右滑动/拖拽：切换到上一张');
       prev();
     }
     pokeUI();
   } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
-    // 纯粹轻点（无明显拖拽）：仅唤出底部控制栏 3 秒，绝不打断播放！
     pokeUI();
   }
 });
@@ -942,7 +1085,7 @@ stage.addEventListener('pointercancel', () => {
 
 document.body.addEventListener('mousemove', pokeUI);
 
-// 键盘左右方向键与空格快捷键（兼容外接键盘的平板或电脑）
+// 键盘快捷键
 window.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
     next();
@@ -956,8 +1099,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-
-// 实时自动轮询检测手机上传的新照片（每 5 秒一次）
+// 实时轮询
 setInterval(async () => {
   try {
     const res = await fetch(API_BASE + '/api/media');
@@ -970,17 +1112,14 @@ setInterval(async () => {
   } catch (e) {}
 }, 5000);
 
-// 核心防息屏：调用系统级屏幕常亮锁 (Screen Wake Lock API)
+// 屏幕常亮锁
 let wakeLock = null;
 async function requestWakeLock() {
   if ('wakeLock' in navigator) {
     try {
       wakeLock = await navigator.wakeLock.request('screen');
-      console.log('💡 屏幕常亮锁激活成功：平板将保持常亮');
       wakeLock.addEventListener('release', () => { wakeLock = null; });
-    } catch (e) {
-      console.warn('请求常亮锁被跳过或不受支持:', e);
-    }
+    } catch (e) {}
   }
 }
 
@@ -991,12 +1130,13 @@ window.addEventListener('focus', requestWakeLock);
 document.addEventListener('click', requestWakeLock);
 requestWakeLock();
 
+applyLanguage();
 pokeUI();
 initServerInfo();
 load();
 setTimeout(() => {
   if (media.length > 0) {
-    showToast('💡 提示：点击右上角或轻触屏幕，可随时扫码投送照片');
+    showToast((I18N[currentLang] || I18N.en).toastTip);
   }
 }, 1200);
 </script>
