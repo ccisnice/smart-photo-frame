@@ -9,6 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/ccisnice/smart-photo-frame?style=flat-square&color=blue)](https://github.com/ccisnice/smart-photo-frame/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web%20%7C%20Docker-orange?style=flat-square)](#)
+[![Afdian](https://img.shields.io/badge/Afdian-爱发电赞助-946ce6.svg?style=flat-square)](https://afdian.com/a/cash1985)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/ccisnice/smart-photo-frame/pulls)
 
 <br/>
@@ -91,9 +92,15 @@ docker run -d \
 如果你喜欢这个开源小工具，它帮你的闲置平板焕发了新生，欢迎请作者喝杯咖啡鼓励持续维护与更新！
 
 <div align="center">
+  <p>
+    <a href="https://afdian.com/a/cash1985" target="_blank">
+      <img src="https://img.shields.io/badge/⚡_前往爱发电支持作者-立即赞助-946ce6?style=for-the-badge" alt="爱发电赞助" />
+    </a>
+  </p>
+  <br/>
   <img src="./assets/sponsor.png" width="280" alt="微信赞赏码" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
   <br/>
-  <p><strong>微信扫一扫上方赞赏码，请野生独立开发者喝杯咖啡 ☕️</strong></p>
+  <p><strong>微信扫一扫上方赞赏码，或点击上方「爱发电」请野生独立开发者喝杯咖啡 ☕️</strong></p>
 </div>
 
 > 欢迎在打赏时备注你的 GitHub ID，我会将你列入项目的 **Sponsors（致谢赞助名单）**！❤️

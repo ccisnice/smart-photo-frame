@@ -9,6 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/ccisnice/smart-photo-frame?style=flat-square&color=blue)](https://github.com/ccisnice/smart-photo-frame/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web%20%7C%20Docker-orange?style=flat-square)](#)
+[![Afdian](https://img.shields.io/badge/Donate-Afdian-946ce6.svg?style=flat-square)](https://afdian.com/a/cash1985)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/ccisnice/smart-photo-frame/pulls)
 
 <br/>
@@ -93,9 +94,15 @@ docker run -d \
 If you find this open-source tool helpful and it gives your retired tablet a new life, consider buying the author a cup of coffee!
 
 <div align="center">
+  <p>
+    <a href="https://afdian.com/a/cash1985" target="_blank">
+      <img src="https://img.shields.io/badge/⚡_Support_on_Afdian-Donate_Now-946ce6?style=for-the-badge" alt="Support on Afdian" />
+    </a>
+  </p>
+  <br/>
   <img src="./assets/sponsor.png" width="260" alt="WeChat Sponsor QR" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
   <br/>
-  <p><strong>Scan with WeChat to support independent open-source development ☕</strong></p>
+  <p><strong>Support via Afdian (Alipay / WeChat) or scan WeChat QR above ☕</strong></p>
 </div>
 
 > Please leave your GitHub ID in the transfer note so I can add you to our **Sponsors list**! ❤️
